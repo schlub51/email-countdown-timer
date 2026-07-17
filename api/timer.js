@@ -1,7 +1,6 @@
 import GIFEncoder from "gif-encoder-2";
 import { Redis } from "@upstash/redis";
 import sharp from "sharp";
-import { readFileSync } from "node:fs";
 
 const DEFAULTS = {
   width: 640,
@@ -16,7 +15,6 @@ const DEFAULTS = {
 };
 
 let redis;
-let embeddedFont;
 
 const SEGMENTS = {
   0: ["a", "b", "c", "d", "e", "f"],
@@ -147,49 +145,84 @@ function createArcSvg(totalSeconds, options) {
   const stroke = Math.max(6, Math.floor(radius * 0.13));
   const circumference = 2 * Math.PI * radius;
   const maxValues = [99, 24, 60, 60];
-  const fontSize = Math.max(24, Math.floor(radius * 0.72));
   const labelSize = Math.max(10, Math.floor(radius * 0.19));
-  const font = getEmbeddedFont();
+  const digitHeight = Math.floor(radius * 0.92);
+  const digitWidth = Math.floor(radius * 0.44);
+  const digitGap = Math.max(4, Math.floor(radius * 0.08));
 
   const cells = values.map((value, index) => {
     const centerX = margin + Math.floor(cellWidth / 2) + index * (cellWidth + gap);
     const progress = Math.max(0, Math.min(1, value / maxValues[index]));
     const dash = circumference * progress;
     const displayValue = String(value).padStart(2, "0");
+    const digitsWidth = digitWidth * 2 + digitGap;
+    const digitY = centerY - Math.floor(digitHeight / 2);
+    const firstDigitX = centerX - Math.floor(digitsWidth / 2);
+    const secondDigitX = firstDigitX + digitWidth + digitGap;
 
     return `
       <g>
         <circle cx="${centerX}" cy="${centerY}" r="${radius}" fill="none" stroke="rgba(255,255,255,0.16)" stroke-width="${stroke}" />
         <circle cx="${centerX}" cy="${centerY}" r="${radius}" fill="none" stroke="${accent}" stroke-width="${stroke}" stroke-linecap="round"
           stroke-dasharray="${dash} ${circumference - dash}" transform="rotate(-90 ${centerX} ${centerY})" />
-        <text x="${centerX}" y="${centerY + Math.floor(fontSize * 0.34)}" text-anchor="middle"
-          font-family="TimerFont, Arial, sans-serif" font-size="${fontSize}" fill="${fg}">${displayValue}</text>
-        <text x="${centerX}" y="${centerY + radius + labelSize + 10}" text-anchor="middle"
-          font-family="TimerFont, Arial, sans-serif" font-size="${labelSize}" letter-spacing="1.2" fill="rgba(255,255,255,0.55)">${labels[index] || ""}</text>
+        ${svgDigit(displayValue[0], firstDigitX, digitY, digitWidth, digitHeight, fg)}
+        ${svgDigit(displayValue[1], secondDigitX, digitY, digitWidth, digitHeight, fg)}
+        ${svgTinyText(labels[index] || "", centerX, centerY + radius + 7, labelSize, "rgba(255,255,255,0.55)")}
       </g>`;
   }).join("");
 
   return `
     <svg xmlns="http://www.w3.org/2000/svg" width="${options.width}" height="${options.height}" viewBox="0 0 ${options.width} ${options.height}">
-      <defs>
-        <style>
-          @font-face {
-            font-family: "TimerFont";
-            src: url("${font}") format("truetype");
-          }
-        </style>
-      </defs>
       <rect width="100%" height="100%" fill="${bg}" />
       ${cells}
     </svg>`;
 }
 
-function getEmbeddedFont() {
-  if (!embeddedFont) {
-    const font = readFileSync(new URL("../fonts/BebasNeue.ttf", import.meta.url));
-    embeddedFont = `data:font/truetype;base64,${font.toString("base64")}`;
+const DIGIT_PATHS = {
+  0: "M50 10 C25 10 14 36 14 80 C14 124 25 150 50 150 C75 150 86 124 86 80 C86 36 75 10 50 10 Z",
+  1: "M38 38 L60 16 L60 150",
+  2: "M18 48 C22 18 79 15 83 48 C87 79 24 92 18 150 L86 150",
+  3: "M20 24 C74 6 94 42 57 77 C96 87 85 156 20 140",
+  4: "M78 150 L78 14 L14 104 L90 104",
+  5: "M82 16 L24 16 L18 70 C90 50 98 150 20 144",
+  6: "M78 20 C35 20 18 62 20 103 C22 146 84 158 86 104 C88 64 34 64 20 104",
+  7: "M16 18 L88 18 L40 150",
+  8: "M50 80 C23 80 20 12 50 12 C80 12 77 80 50 80 Z M50 80 C17 80 16 150 50 150 C84 150 83 80 50 80 Z",
+  9: "M22 144 C65 144 82 102 80 61 C78 18 16 6 14 60 C12 100 66 100 80 60",
+};
+
+function svgDigit(value, x, y, width, height, color) {
+  const path = DIGIT_PATHS[value] || DIGIT_PATHS[0];
+  const scaleX = width / 100;
+  const scaleY = height / 160;
+  const stroke = Math.max(4, Math.min(width, height) * 0.11);
+
+  return `<path d="${path}" transform="translate(${x} ${y}) scale(${scaleX} ${scaleY})" fill="none" stroke="${color}" stroke-width="${stroke}" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" />`;
+}
+
+function svgTinyText(text, centerX, y, size, color) {
+  const scale = Math.max(1.5, size / 5);
+  const spacing = scale;
+  const chars = text.toUpperCase().replace(/[^A-Z]/g, "").split("");
+  const textWidth = chars.length * 3 * scale + Math.max(0, chars.length - 1) * spacing;
+  let x = centerX - textWidth / 2;
+  let output = "";
+
+  for (const char of chars) {
+    const glyph = LETTERS[char];
+    if (glyph) {
+      for (let row = 0; row < glyph.length; row += 1) {
+        for (let col = 0; col < glyph[row].length; col += 1) {
+          if (glyph[row][col] === "1") {
+            output += `<rect x="${x + col * scale}" y="${y + row * scale}" width="${scale}" height="${scale}" fill="${color}" />`;
+          }
+        }
+      }
+    }
+    x += 3 * scale + spacing;
   }
-  return embeddedFont;
+
+  return `<g>${output}</g>`;
 }
 
 function drawFrame(totalSeconds, options) {
