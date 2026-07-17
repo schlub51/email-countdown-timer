@@ -112,6 +112,19 @@
         gap: 8px;
       }
 
+      .check-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 40px;
+      }
+
+      .check-row input {
+        width: 16px;
+        min-height: 16px;
+        margin: 0;
+      }
+
       textarea {
         min-height: 118px;
         resize: vertical;
@@ -374,7 +387,7 @@
             <input id="frames" type="number" min="1" max="60" value="15">
           </label>
           <label>
-            <span>
+            <span class="check-row">
               <input id="loop" type="checkbox">
               Loop animation
             </span>
@@ -417,6 +430,7 @@
           <div class="actions">
             <button id="copyUrl" class="primary" type="button">Copy URL</button>
             <button id="copyHtml" type="button">Copy HTML</button>
+            <button id="shortenUrl" type="button">Shorten URL</button>
             <button id="refreshPreview" type="button">Refresh preview</button>
           </div>
         </div>
@@ -455,17 +469,26 @@
         durationMetric: document.querySelector("#durationMetric"),
         copyUrl: document.querySelector("#copyUrl"),
         copyHtml: document.querySelector("#copyHtml"),
+        shortenUrl: document.querySelector("#shortenUrl"),
         refreshPreview: document.querySelector("#refreshPreview"),
       };
 
       let mode = "fixed";
       let cacheBust = Date.now();
+      let activeUrl = "";
+      let shortUrl = "";
       const defaultEnd = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
       controls.endDate.value = toDatetimeLocal(defaultEnd);
 
       for (const element of document.querySelectorAll("input, select")) {
-        element.addEventListener("input", update);
-        element.addEventListener("change", update);
+        element.addEventListener("input", () => {
+          shortUrl = "";
+          update();
+        });
+        element.addEventListener("change", () => {
+          shortUrl = "";
+          update();
+        });
       }
 
       syncColor("bg", "bgHex");
@@ -480,6 +503,7 @@
       });
       controls.copyUrl.addEventListener("click", () => copyText(controls.imageUrl.value));
       controls.copyHtml.addEventListener("click", () => copyText(controls.htmlSnippet.value));
+      controls.shortenUrl.addEventListener("click", shortenCurrentUrl);
 
       update();
 
@@ -494,6 +518,7 @@
 
       function update() {
         const url = buildUrl();
+        activeUrl = shortUrl || url;
         const previewUrl = new URL(url);
         if (mode === "evergreen") {
           previewUrl.searchParams.set("preview", "true");
@@ -501,8 +526,8 @@
         previewUrl.searchParams.set("_", cacheBust);
 
         controls.preview.src = previewUrl.toString();
-        controls.imageUrl.value = url;
-        controls.htmlSnippet.value = buildHtmlSnippet(url);
+        controls.imageUrl.value = activeUrl;
+        controls.htmlSnippet.value = buildHtmlSnippet(activeUrl);
         controls.modeMetric.textContent = mode === "fixed" ? "Fixed" : "Evergreen";
         controls.durationMetric.textContent = mode === "fixed" ? fixedDurationLabel() : durationLabel(durationSeconds());
         estimateSize(previewUrl.toString());
@@ -529,6 +554,56 @@
         }
 
         return url.toString();
+      }
+
+      function getConfig() {
+        const config = {
+          mode,
+          style: value("style"),
+          font: value("font"),
+          bg: color("bg"),
+          fg: color("fg"),
+          accent: color("accent"),
+          width: value("width"),
+          height: value("height"),
+          frames: value("frames"),
+          loop: controls.loop.checked ? "true" : "false",
+        };
+
+        if (mode === "fixed") {
+          config.end = new Date(controls.endDate.value).toISOString();
+        } else {
+          config.duration = String(durationSeconds());
+          config.id = controls.recipientId.value || "{{ customer.id }}";
+        }
+
+        return config;
+      }
+
+      async function shortenCurrentUrl() {
+        controls.shortenUrl.disabled = true;
+        controls.shortenUrl.textContent = "Shortening...";
+
+        try {
+          const response = await fetch("/api/shorten", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(getConfig()),
+          });
+          const payload = await response.json();
+          if (!response.ok || !payload.url) {
+            throw new Error(payload.error || "Shorten failed");
+          }
+          shortUrl = payload.url;
+          activeUrl = shortUrl;
+          controls.imageUrl.value = activeUrl;
+          controls.htmlSnippet.value = buildHtmlSnippet(activeUrl);
+        } catch {
+          shortUrl = "";
+        } finally {
+          controls.shortenUrl.disabled = false;
+          controls.shortenUrl.textContent = "Shorten URL";
+        }
       }
 
       function buildHtmlSnippet(url) {

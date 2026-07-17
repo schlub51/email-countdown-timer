@@ -39,8 +39,9 @@ const SEGMENTS = {
 export default async function handler(req, res) {
   try {
     const url = new URL(req.url, `https://${req.headers.host || "localhost"}`);
-    const options = getOptions(url.searchParams);
-    const endTime = await resolveEndTime(url.searchParams, options);
+    const params = await resolveParams(url.searchParams);
+    const options = getOptions(params);
+    const endTime = await resolveEndTime(params, options);
     const now = Date.now();
     const remaining = Math.max(0, Math.floor((endTime - now) / 1000));
     const gif = await optimizeGif(await createTimerGif(remaining, options));
@@ -56,6 +57,33 @@ export default async function handler(req, res) {
     res.setHeader("Cache-Control", "no-store");
     res.status(200).send(fallback);
   }
+}
+
+async function resolveParams(params) {
+  const configId = sanitizeKey(params.get("config") || "");
+  if (!configId) {
+    return params;
+  }
+
+  const config = await getRedis().get(`timer:config:${configId}`);
+  if (!config || typeof config !== "object") {
+    throw new Error("Timer config not found");
+  }
+
+  const merged = new URLSearchParams();
+  for (const [key, value] of Object.entries(config)) {
+    if (value !== undefined && value !== null) {
+      merged.set(key, String(value));
+    }
+  }
+
+  for (const [key, value] of params.entries()) {
+    if (key !== "config") {
+      merged.set(key, value);
+    }
+  }
+
+  return merged;
 }
 
 async function resolveEndTime(params, options) {
