@@ -129,6 +129,10 @@
         background: #f4f6f8;
       }
 
+      .segmented.three {
+        grid-template-columns: 1fr 1fr 1fr;
+      }
+
       .segmented button {
         min-height: 36px;
         border: 0;
@@ -347,6 +351,14 @@
 
         <div class="group">
           <h2>Output</h2>
+          <label>
+            HTML alignment
+            <select id="align">
+              <option value="center">Center</option>
+              <option value="left">Left</option>
+              <option value="right">Right</option>
+            </select>
+          </label>
           <div class="row">
             <label>
               Width
@@ -359,16 +371,22 @@
           </div>
           <label>
             Frames
-            <input id="frames" type="number" min="1" max="60" value="10">
+            <input id="frames" type="number" min="1" max="60" value="20">
           </label>
-          <p class="hint">Fewer frames means a smaller GIF. Keep the first frame readable for clients that do not animate GIFs.</p>
+          <label>
+            <span>
+              <input id="loop" type="checkbox">
+              Loop animation
+            </span>
+          </label>
+          <p class="hint">Frames control how many seconds are embedded in the GIF. If looping is off, the GIF plays once and holds on the last frame.</p>
         </div>
       </aside>
 
       <section>
         <div class="preview-wrap">
           <div class="preview-stage">
-            <img id="preview" src="/api/timer?mode=duration&amp;duration=7200&amp;style=arc&amp;font=inter&amp;width=400&amp;height=80&amp;frames=10&amp;bg=ffffff&amp;fg=0f1a4c&amp;accent=233db2" alt="Countdown preview">
+            <img id="preview" src="/api/timer?mode=duration&amp;duration=7200&amp;style=arc&amp;font=inter&amp;width=400&amp;height=80&amp;frames=20&amp;loop=false&amp;bg=ffffff&amp;fg=0f1a4c&amp;accent=233db2" alt="Countdown preview">
           </div>
 
           <div class="meta">
@@ -418,6 +436,7 @@
         recipientId: document.querySelector("#recipientId"),
         style: document.querySelector("#style"),
         font: document.querySelector("#font"),
+        align: document.querySelector("#align"),
         bg: document.querySelector("#bg"),
         bgHex: document.querySelector("#bgHex"),
         fg: document.querySelector("#fg"),
@@ -427,6 +446,7 @@
         width: document.querySelector("#width"),
         height: document.querySelector("#height"),
         frames: document.querySelector("#frames"),
+        loop: document.querySelector("#loop"),
         preview: document.querySelector("#preview"),
         imageUrl: document.querySelector("#imageUrl"),
         htmlSnippet: document.querySelector("#htmlSnippet"),
@@ -479,7 +499,7 @@
 
         controls.preview.src = previewUrl.toString();
         controls.imageUrl.value = url;
-        controls.htmlSnippet.value = `<img src="${url}" style="display:block;width:100%;max-width:${value("width")}px;height:auto;" border="0" alt="Countdown">`;
+        controls.htmlSnippet.value = buildHtmlSnippet(url);
         controls.modeMetric.textContent = mode === "fixed" ? "Fixed" : "Evergreen";
         controls.durationMetric.textContent = mode === "fixed" ? fixedDurationLabel() : durationLabel(durationSeconds());
         estimateSize(previewUrl.toString());
@@ -496,6 +516,7 @@
         url.searchParams.set("width", value("width"));
         url.searchParams.set("height", value("height"));
         url.searchParams.set("frames", value("frames"));
+        url.searchParams.set("loop", controls.loop.checked ? "true" : "false");
 
         if (mode === "fixed") {
           url.searchParams.set("end", new Date(controls.endDate.value).toISOString());
@@ -505,6 +526,22 @@
         }
 
         return url.toString();
+      }
+
+      function buildHtmlSnippet(url) {
+        const align = value("align");
+        const style = `display:block;width:100%;max-width:${value("width")}px;height:auto;`;
+        const image = `<img src="${url}" style="${style}" border="0" alt="Countdown">`;
+
+        if (align === "left") {
+          return `<table align="left" role="presentation" border="0" cellpadding="0" cellspacing="0"><tbody><tr><td>${image}</td></tr></tbody></table>`;
+        }
+
+        if (align === "right") {
+          return `<table align="right" role="presentation" border="0" cellpadding="0" cellspacing="0"><tbody><tr><td>${image}</td></tr></tbody></table>`;
+        }
+
+        return `<table align="center" role="presentation" border="0" cellpadding="0" cellspacing="0"><tbody><tr><td>${image}</td></tr></tbody></table>`;
       }
 
       function value(id) {

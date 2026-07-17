@@ -14,9 +14,10 @@ const DEFAULTS = {
   accent: "233DB2",
   label: "DAYS,HRS,MINS,SECS",
   duration: 7200,
-  frames: 10,
+  frames: 20,
   style: "arc",
   font: "inter",
+  loop: false,
 };
 
 let redis;
@@ -111,6 +112,7 @@ function getOptions(params) {
     frames: clampNumber(params.get("frames"), 1, 60, DEFAULTS.frames),
     style: ["arc", "card"].includes((params.get("style") || "").toLowerCase()) ? params.get("style").toLowerCase() : DEFAULTS.style,
     font: normalizeFont(params.get("font")),
+    loop: parseBoolean(params.get("loop"), DEFAULTS.loop),
   };
 }
 
@@ -119,7 +121,7 @@ async function createTimerGif(totalSeconds, options) {
   const frameCount = totalSeconds === 0 ? 1 : Math.min(options.frames, totalSeconds + 1);
 
   encoder.start();
-  encoder.setRepeat(totalSeconds === 0 ? -1 : 0);
+  encoder.setRepeat(totalSeconds === 0 || !options.loop ? -1 : 0);
   encoder.setDelay(1000);
   encoder.setQuality(12);
 
@@ -164,25 +166,25 @@ function createArcSvg(totalSeconds, options) {
   const fg = `#${options.foreground}`;
   const accent = `#${options.accent}`;
   const values = splitTime(totalSeconds);
-  const labels = options.label.split(",").map((label) => escapeXml(label.trim().slice(0, 8) || ""));
+  const labels = options.label.split(",").map((label) => escapeXml(titleCase(label.trim().slice(0, 8) || "")));
   const gap = Math.max(0, Math.round(options.width * 0.002));
-  const margin = Math.max(2, Math.round(options.width * 0.006));
+  const margin = Math.max(1, Math.round(options.width * 0.004));
   const cellWidth = Math.floor((options.width - margin * 2 - gap * 3) / 4);
-  const centerY = Math.floor(options.height * 0.43);
-  const radius = Math.min(Math.floor(cellWidth * 0.48), Math.floor(options.height * 0.37));
-  const stroke = Math.max(6, Math.floor(radius * 0.13));
+  const centerY = Math.floor(options.height * 0.5);
+  const radius = Math.min(Math.floor(cellWidth * 0.49), Math.floor(options.height * 0.43));
+  const stroke = Math.max(4, Math.floor(radius * 0.105));
   const circumference = 2 * Math.PI * radius;
   const maxValues = [99, 24, 60, 60];
-  const labelSize = Math.max(10, Math.floor(radius * 0.2));
-  const numberSize = Math.max(28, Math.floor(radius * 0.82));
+  const labelSize = Math.max(8, Math.floor(radius * 0.24));
+  const numberSize = Math.max(24, Math.floor(radius * 0.82));
 
   const cells = values.map((value, index) => {
     const centerX = margin + Math.floor(cellWidth / 2) + index * (cellWidth + gap);
     const progress = Math.max(0, Math.min(1, value / maxValues[index]));
     const dash = circumference * progress;
     const displayValue = String(value).padStart(2, "0");
-    const numberPath = svgText(displayValue, centerX, centerY + Math.floor(numberSize * 0.34), numberSize, fg, 700, true, 0, options.font);
-    const labelPath = svgText(labels[index] || "", centerX, centerY + radius + labelSize + 2, labelSize, "rgba(15,26,76,0.52)", 600, true, 1.5, options.font);
+    const numberPath = svgText(displayValue, centerX, centerY - Math.floor(radius * 0.08), numberSize, fg, 500, true, 0, options.font);
+    const labelPath = svgText(labels[index] || "", centerX, centerY + Math.floor(radius * 0.42), labelSize, fg, 400, true, 0, options.font);
 
     return `
       <g>
@@ -235,18 +237,26 @@ function svgText(text, x, y, fontSize, color, weight, centered = false, letterSp
 
 const FONT_FILES = {
   inter: {
+    400: "../node_modules/@fontsource/inter/files/inter-latin-400-normal.woff",
+    500: "../node_modules/@fontsource/inter/files/inter-latin-500-normal.woff",
     600: "../node_modules/@fontsource/inter/files/inter-latin-600-normal.woff",
     700: "../node_modules/@fontsource/inter/files/inter-latin-700-normal.woff",
   },
   roboto: {
+    400: "../node_modules/@fontsource/roboto/files/roboto-latin-400-normal.woff",
+    500: "../node_modules/@fontsource/roboto/files/roboto-latin-500-normal.woff",
     600: "../node_modules/@fontsource/roboto/files/roboto-latin-600-normal.woff",
     700: "../node_modules/@fontsource/roboto/files/roboto-latin-700-normal.woff",
   },
   "open-sans": {
+    400: "../node_modules/@fontsource/open-sans/files/open-sans-latin-400-normal.woff",
+    500: "../node_modules/@fontsource/open-sans/files/open-sans-latin-500-normal.woff",
     600: "../node_modules/@fontsource/open-sans/files/open-sans-latin-600-normal.woff",
     700: "../node_modules/@fontsource/open-sans/files/open-sans-latin-700-normal.woff",
   },
   lato: {
+    400: "../node_modules/@fontsource/lato/files/lato-latin-400-normal.woff",
+    500: "../node_modules/@fontsource/lato/files/lato-latin-700-normal.woff",
     600: "../node_modules/@fontsource/lato/files/lato-latin-700-normal.woff",
     700: "../node_modules/@fontsource/lato/files/lato-latin-700-normal.woff",
   },
@@ -258,7 +268,7 @@ function getTextRenderer(font, weight) {
   }
 
   const family = normalizeFont(font);
-  const normalizedWeight = weight >= 700 ? 700 : 600;
+  const normalizedWeight = [400, 500, 600, 700].includes(weight) ? weight : 600;
   const key = `${family}:${normalizedWeight}`;
   if (!textToSvg.has(key)) {
     textToSvg.set(
@@ -273,6 +283,10 @@ function getTextRenderer(font, weight) {
 function normalizeFont(value) {
   const font = String(value || "").toLowerCase();
   return Object.hasOwn(FONT_FILES, font) ? font : DEFAULTS.font;
+}
+
+function titleCase(value) {
+  return String(value || "").toLowerCase().replace(/(^|\s)\w/g, (match) => match.toUpperCase());
 }
 
 function drawFrame(totalSeconds, options) {
@@ -519,6 +533,13 @@ function clampNumber(value, min, max, fallback) {
     return fallback;
   }
   return Math.min(max, Math.max(min, Math.floor(number)));
+}
+
+function parseBoolean(value, fallback) {
+  if (value === null || value === undefined || value === "") {
+    return fallback;
+  }
+  return ["1", "true", "yes", "on"].includes(String(value).toLowerCase());
 }
 
 function sanitizeKey(value) {
