@@ -3,6 +3,8 @@ import { Redis } from "@upstash/redis";
 import sharp from "sharp";
 import TextToSVG from "text-to-svg";
 import { fileURLToPath } from "node:url";
+import { spawn } from "node:child_process";
+import gifsicle from "gifsicle";
 
 const DEFAULTS = {
   width: 640,
@@ -40,7 +42,7 @@ export default async function handler(req, res) {
     const endTime = await resolveEndTime(url.searchParams, options);
     const now = Date.now();
     const remaining = Math.max(0, Math.floor((endTime - now) / 1000));
-    const gif = await createTimerGif(remaining, options);
+    const gif = await optimizeGif(await createTimerGif(remaining, options));
 
     res.setHeader("Content-Type", "image/gif");
     res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
@@ -48,7 +50,7 @@ export default async function handler(req, res) {
     res.setHeader("Expires", "0");
     res.status(200).send(gif);
   } catch (error) {
-    const fallback = await createTimerGif(0, DEFAULTS);
+    const fallback = await optimizeGif(await createTimerGif(0, DEFAULTS));
     res.setHeader("Content-Type", "image/gif");
     res.setHeader("Cache-Control", "no-store");
     res.status(200).send(fallback);
@@ -131,6 +133,27 @@ async function createTimerGif(totalSeconds, options) {
   return Buffer.from(encoder.out.getData());
 }
 
+function optimizeGif(input) {
+  return new Promise((resolve) => {
+    const chunks = [];
+    const child = spawn(gifsicle, ["-O3", "--colors", "64"], {
+      stdio: ["pipe", "pipe", "ignore"],
+    });
+
+    child.stdout.on("data", (chunk) => chunks.push(chunk));
+    child.on("error", () => resolve(input));
+    child.on("close", (code) => {
+      if (code !== 0 || chunks.length === 0) {
+        resolve(input);
+        return;
+      }
+      resolve(Buffer.concat(chunks));
+    });
+
+    child.stdin.end(input);
+  });
+}
+
 async function drawArcSvgFrame(totalSeconds, options) {
   const svg = createArcSvg(totalSeconds, options);
   return sharp(Buffer.from(svg)).ensureAlpha().raw().toBuffer();
@@ -142,8 +165,8 @@ function createArcSvg(totalSeconds, options) {
   const accent = `#${options.accent}`;
   const values = splitTime(totalSeconds);
   const labels = options.label.split(",").map((label) => escapeXml(label.trim().slice(0, 8) || ""));
-  const gap = Math.max(8, Math.round(options.width * 0.014));
-  const margin = Math.max(12, Math.round(options.width * 0.028));
+  const gap = Math.max(4, Math.round(options.width * 0.008));
+  const margin = Math.max(8, Math.round(options.width * 0.018));
   const cellWidth = Math.floor((options.width - margin * 2 - gap * 3) / 4);
   const centerY = Math.floor(options.height * 0.47);
   const radius = Math.min(Math.floor(cellWidth * 0.42), Math.floor(options.height * 0.34));

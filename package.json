@@ -14,6 +14,8 @@
     "@fontsource/roboto": "^5.2.10",
     "@upstash/redis": "^1.35.3",
     "gif-encoder-2": "^1.0.5",
+    "gifsicle": "^7.0.1",
+    "gifuct-js": "^2.1.2",
     "sharp": "^0.35.3",
     "text-to-svg": "^3.1.5"
   },
