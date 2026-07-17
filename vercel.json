@@ -1,4 +1,9 @@
 {
+  "functions": {
+    "api/timer.js": {
+      "includeFiles": "node_modules/@fontsource/**/files/*.woff"
+    }
+  },
   "rewrites": [
     {
       "source": "/countdown.php",
