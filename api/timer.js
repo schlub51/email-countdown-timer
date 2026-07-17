@@ -1,6 +1,7 @@
 import GIFEncoder from "gif-encoder-2";
 import { Redis } from "@upstash/redis";
 import sharp from "sharp";
+import { readFileSync } from "node:fs";
 
 const DEFAULTS = {
   width: 640,
@@ -15,6 +16,7 @@ const DEFAULTS = {
 };
 
 let redis;
+let embeddedFont;
 
 const SEGMENTS = {
   0: ["a", "b", "c", "d", "e", "f"],
@@ -147,6 +149,7 @@ function createArcSvg(totalSeconds, options) {
   const maxValues = [99, 24, 60, 60];
   const fontSize = Math.max(24, Math.floor(radius * 0.72));
   const labelSize = Math.max(10, Math.floor(radius * 0.19));
+  const font = getEmbeddedFont();
 
   const cells = values.map((value, index) => {
     const centerX = margin + Math.floor(cellWidth / 2) + index * (cellWidth + gap);
@@ -160,17 +163,33 @@ function createArcSvg(totalSeconds, options) {
         <circle cx="${centerX}" cy="${centerY}" r="${radius}" fill="none" stroke="${accent}" stroke-width="${stroke}" stroke-linecap="round"
           stroke-dasharray="${dash} ${circumference - dash}" transform="rotate(-90 ${centerX} ${centerY})" />
         <text x="${centerX}" y="${centerY + Math.floor(fontSize * 0.34)}" text-anchor="middle"
-          font-family="Arial, Helvetica, sans-serif" font-size="${fontSize}" font-weight="700" fill="${fg}">${displayValue}</text>
+          font-family="TimerFont, Arial, sans-serif" font-size="${fontSize}" fill="${fg}">${displayValue}</text>
         <text x="${centerX}" y="${centerY + radius + labelSize + 10}" text-anchor="middle"
-          font-family="Arial, Helvetica, sans-serif" font-size="${labelSize}" font-weight="700" letter-spacing="1.2" fill="rgba(255,255,255,0.55)">${labels[index] || ""}</text>
+          font-family="TimerFont, Arial, sans-serif" font-size="${labelSize}" letter-spacing="1.2" fill="rgba(255,255,255,0.55)">${labels[index] || ""}</text>
       </g>`;
   }).join("");
 
   return `
     <svg xmlns="http://www.w3.org/2000/svg" width="${options.width}" height="${options.height}" viewBox="0 0 ${options.width} ${options.height}">
+      <defs>
+        <style>
+          @font-face {
+            font-family: "TimerFont";
+            src: url("${font}") format("truetype");
+          }
+        </style>
+      </defs>
       <rect width="100%" height="100%" fill="${bg}" />
       ${cells}
     </svg>`;
+}
+
+function getEmbeddedFont() {
+  if (!embeddedFont) {
+    const font = readFileSync(new URL("../fonts/BebasNeue.ttf", import.meta.url));
+    embeddedFont = `data:font/truetype;base64,${font.toString("base64")}`;
+  }
+  return embeddedFont;
 }
 
 function drawFrame(totalSeconds, options) {
