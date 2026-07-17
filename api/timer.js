@@ -186,8 +186,8 @@ function drawArcLayout(buffer, options, values, labels, bg, fg, accent, muted) {
     drawRing(buffer, options.width, options.height, centerX, centerY, radius, ring, accent, values[i] / maxValues[i]);
 
     const value = String(values[i]).padStart(2, "0");
-    const digitHeight = Math.floor(radius * 0.72);
-    const digitWidth = Math.floor(radius * 0.27);
+    const digitHeight = Math.floor(radius * 0.95);
+    const digitWidth = Math.floor(radius * 0.34);
     const digitGap = Math.max(3, Math.floor(radius * 0.05));
     const numberWidth = digitWidth * 2 + digitGap;
     const digitX = centerX - Math.floor(numberWidth / 2);
