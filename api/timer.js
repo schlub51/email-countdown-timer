@@ -165,11 +165,11 @@ function createArcSvg(totalSeconds, options) {
   const accent = `#${options.accent}`;
   const values = splitTime(totalSeconds);
   const labels = options.label.split(",").map((label) => escapeXml(label.trim().slice(0, 8) || ""));
-  const gap = Math.max(2, Math.round(options.width * 0.004));
-  const margin = Math.max(5, Math.round(options.width * 0.012));
+  const gap = Math.max(0, Math.round(options.width * 0.002));
+  const margin = Math.max(2, Math.round(options.width * 0.006));
   const cellWidth = Math.floor((options.width - margin * 2 - gap * 3) / 4);
-  const centerY = Math.floor(options.height * 0.47);
-  const radius = Math.min(Math.floor(cellWidth * 0.44), Math.floor(options.height * 0.35));
+  const centerY = Math.floor(options.height * 0.43);
+  const radius = Math.min(Math.floor(cellWidth * 0.48), Math.floor(options.height * 0.37));
   const stroke = Math.max(6, Math.floor(radius * 0.13));
   const circumference = 2 * Math.PI * radius;
   const maxValues = [99, 24, 60, 60];
@@ -182,7 +182,7 @@ function createArcSvg(totalSeconds, options) {
     const dash = circumference * progress;
     const displayValue = String(value).padStart(2, "0");
     const numberPath = svgText(displayValue, centerX, centerY + Math.floor(numberSize * 0.34), numberSize, fg, 700, true, 0, options.font);
-    const labelPath = svgText(labels[index] || "", centerX, centerY + radius + labelSize + 5, labelSize, "rgba(15,26,76,0.52)", 600, true, 1.5, options.font);
+    const labelPath = svgText(labels[index] || "", centerX, centerY + radius + labelSize + 2, labelSize, "rgba(15,26,76,0.52)", 600, true, 1.5, options.font);
 
     return `
       <g>
