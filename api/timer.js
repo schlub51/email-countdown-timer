@@ -171,7 +171,7 @@ function createArcSvg(totalSeconds, options) {
   const margin = Math.max(1, Math.round(options.width * 0.004));
   const cellWidth = Math.floor((options.width - margin * 2 - gap * 3) / 4);
   const centerY = Math.floor(options.height * 0.5);
-  const radius = Math.min(Math.floor(cellWidth * 0.49), Math.floor(options.height * 0.43));
+  const radius = Math.min(Math.floor(cellWidth * 0.57), Math.floor(options.height * 0.43));
   const stroke = Math.max(4, Math.floor(radius * 0.105));
   const circumference = 2 * Math.PI * radius;
   const maxValues = [99, 24, 60, 60];
