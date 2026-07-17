@@ -344,7 +344,7 @@
       <section>
         <div class="preview-wrap">
           <div class="preview-stage">
-            <img id="preview" alt="Countdown preview">
+            <img id="preview" src="/api/timer?mode=duration&amp;duration=7200&amp;style=arc&amp;width=480&amp;height=120&amp;frames=30" alt="Countdown preview">
           </div>
 
           <div class="meta">
@@ -447,7 +447,7 @@
 
         controls.preview.src = previewUrl.toString();
         controls.imageUrl.value = url;
-        controls.htmlSnippet.value = `<img src="${url}" width="${value("width")}" height="${value("height")}" alt="Countdown">`;
+        controls.htmlSnippet.value = `<img src="${url}" style="display:block;width:100%;max-width:${value("width")}px;height:auto;" border="0" alt="Countdown">`;
         controls.modeMetric.textContent = mode === "fixed" ? "Fixed" : "Evergreen";
         controls.durationMetric.textContent = mode === "fixed" ? fixedDurationLabel() : durationLabel(durationSeconds());
         estimateSize(previewUrl.toString());
