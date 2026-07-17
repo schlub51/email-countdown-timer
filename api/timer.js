@@ -7,14 +7,14 @@ import { spawn } from "node:child_process";
 import gifsicle from "gifsicle";
 
 const DEFAULTS = {
-  width: 640,
-  height: 140,
+  width: 400,
+  height: 80,
   background: "FFFFFF",
   foreground: "0F1A4C",
   accent: "233DB2",
   label: "DAYS,HRS,MINS,SECS",
   duration: 7200,
-  frames: 60,
+  frames: 10,
   style: "arc",
   font: "inter",
 };
@@ -165,11 +165,11 @@ function createArcSvg(totalSeconds, options) {
   const accent = `#${options.accent}`;
   const values = splitTime(totalSeconds);
   const labels = options.label.split(",").map((label) => escapeXml(label.trim().slice(0, 8) || ""));
-  const gap = Math.max(4, Math.round(options.width * 0.008));
-  const margin = Math.max(8, Math.round(options.width * 0.018));
+  const gap = Math.max(2, Math.round(options.width * 0.004));
+  const margin = Math.max(5, Math.round(options.width * 0.012));
   const cellWidth = Math.floor((options.width - margin * 2 - gap * 3) / 4);
   const centerY = Math.floor(options.height * 0.47);
-  const radius = Math.min(Math.floor(cellWidth * 0.42), Math.floor(options.height * 0.34));
+  const radius = Math.min(Math.floor(cellWidth * 0.44), Math.floor(options.height * 0.35));
   const stroke = Math.max(6, Math.floor(radius * 0.13));
   const circumference = 2 * Math.PI * radius;
   const maxValues = [99, 24, 60, 60];
