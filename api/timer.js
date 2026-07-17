@@ -1,5 +1,6 @@
 import GIFEncoder from "gif-encoder-2";
 import { Redis } from "@upstash/redis";
+import sharp from "sharp";
 
 const DEFAULTS = {
   width: 640,
@@ -35,7 +36,7 @@ export default async function handler(req, res) {
     const endTime = await resolveEndTime(url.searchParams, options);
     const now = Date.now();
     const remaining = Math.max(0, Math.floor((endTime - now) / 1000));
-    const gif = createTimerGif(remaining, options);
+    const gif = await createTimerGif(remaining, options);
 
     res.setHeader("Content-Type", "image/gif");
     res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
@@ -43,7 +44,7 @@ export default async function handler(req, res) {
     res.setHeader("Expires", "0");
     res.status(200).send(gif);
   } catch (error) {
-    const fallback = createTimerGif(0, DEFAULTS);
+    const fallback = await createTimerGif(0, DEFAULTS);
     res.setHeader("Content-Type", "image/gif");
     res.setHeader("Cache-Control", "no-store");
     res.status(200).send(fallback);
@@ -106,7 +107,7 @@ function getOptions(params) {
   };
 }
 
-function createTimerGif(totalSeconds, options) {
+async function createTimerGif(totalSeconds, options) {
   const encoder = new GIFEncoder(options.width, options.height);
   const frameCount = totalSeconds === 0 ? 1 : Math.min(options.frames, totalSeconds + 1);
 
@@ -117,11 +118,59 @@ function createTimerGif(totalSeconds, options) {
 
   for (let index = 0; index < frameCount; index += 1) {
     const seconds = Math.max(0, totalSeconds - index);
-    encoder.addFrame(drawFrame(seconds, options));
+    const frame = options.style === "arc" ? await drawArcSvgFrame(seconds, options) : drawFrame(seconds, options);
+    encoder.addFrame(frame);
   }
 
   encoder.finish();
   return Buffer.from(encoder.out.getData());
+}
+
+async function drawArcSvgFrame(totalSeconds, options) {
+  const svg = createArcSvg(totalSeconds, options);
+  return sharp(Buffer.from(svg)).ensureAlpha().raw().toBuffer();
+}
+
+function createArcSvg(totalSeconds, options) {
+  const bg = `#${options.background}`;
+  const fg = `#${options.foreground}`;
+  const accent = `#${options.accent}`;
+  const values = splitTime(totalSeconds);
+  const labels = options.label.split(",").map((label) => escapeXml(label.trim().slice(0, 8) || ""));
+  const gap = Math.max(8, Math.round(options.width * 0.014));
+  const margin = Math.max(12, Math.round(options.width * 0.028));
+  const cellWidth = Math.floor((options.width - margin * 2 - gap * 3) / 4);
+  const centerY = Math.floor(options.height * 0.47);
+  const radius = Math.min(Math.floor(cellWidth * 0.42), Math.floor(options.height * 0.34));
+  const stroke = Math.max(6, Math.floor(radius * 0.13));
+  const circumference = 2 * Math.PI * radius;
+  const maxValues = [99, 24, 60, 60];
+  const fontSize = Math.max(24, Math.floor(radius * 0.72));
+  const labelSize = Math.max(10, Math.floor(radius * 0.19));
+
+  const cells = values.map((value, index) => {
+    const centerX = margin + Math.floor(cellWidth / 2) + index * (cellWidth + gap);
+    const progress = Math.max(0, Math.min(1, value / maxValues[index]));
+    const dash = circumference * progress;
+    const displayValue = String(value).padStart(2, "0");
+
+    return `
+      <g>
+        <circle cx="${centerX}" cy="${centerY}" r="${radius}" fill="none" stroke="rgba(255,255,255,0.16)" stroke-width="${stroke}" />
+        <circle cx="${centerX}" cy="${centerY}" r="${radius}" fill="none" stroke="${accent}" stroke-width="${stroke}" stroke-linecap="round"
+          stroke-dasharray="${dash} ${circumference - dash}" transform="rotate(-90 ${centerX} ${centerY})" />
+        <text x="${centerX}" y="${centerY + Math.floor(fontSize * 0.34)}" text-anchor="middle"
+          font-family="Arial, Helvetica, sans-serif" font-size="${fontSize}" font-weight="700" fill="${fg}">${displayValue}</text>
+        <text x="${centerX}" y="${centerY + radius + labelSize + 10}" text-anchor="middle"
+          font-family="Arial, Helvetica, sans-serif" font-size="${labelSize}" font-weight="700" letter-spacing="1.2" fill="rgba(255,255,255,0.55)">${labels[index] || ""}</text>
+      </g>`;
+  }).join("");
+
+  return `
+    <svg xmlns="http://www.w3.org/2000/svg" width="${options.width}" height="${options.height}" viewBox="0 0 ${options.width} ${options.height}">
+      <rect width="100%" height="100%" fill="${bg}" />
+      ${cells}
+    </svg>`;
 }
 
 function drawFrame(totalSeconds, options) {
@@ -375,6 +424,14 @@ function sanitizeKey(value) {
     .trim()
     .slice(0, 200)
     .replace(/[^a-zA-Z0-9:._-]/g, "_");
+}
+
+function escapeXml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
 }
 
 function mix(a, b, amount) {

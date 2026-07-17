@@ -106,6 +106,12 @@
         padding: 3px;
       }
 
+      .color-pair {
+        display: grid;
+        grid-template-columns: 48px 1fr;
+        gap: 8px;
+      }
+
       textarea {
         min-height: 118px;
         resize: vertical;
@@ -308,16 +314,25 @@
           <div class="row">
             <label>
               Background
-              <input id="bg" type="color" value="#111827">
+              <span class="color-pair">
+                <input id="bg" type="color" value="#111827">
+                <input id="bgHex" type="text" value="#111827" spellcheck="false">
+              </span>
             </label>
             <label>
               Text
-              <input id="fg" type="color" value="#ffffff">
+              <span class="color-pair">
+                <input id="fg" type="color" value="#ffffff">
+                <input id="fgHex" type="text" value="#ffffff" spellcheck="false">
+              </span>
             </label>
           </div>
           <label>
             Accent
-            <input id="accent" type="color" value="#f59e0b">
+            <span class="color-pair">
+              <input id="accent" type="color" value="#f59e0b">
+              <input id="accentHex" type="text" value="#f59e0b" spellcheck="false">
+            </span>
           </label>
         </div>
 
@@ -394,8 +409,11 @@
         recipientId: document.querySelector("#recipientId"),
         style: document.querySelector("#style"),
         bg: document.querySelector("#bg"),
+        bgHex: document.querySelector("#bgHex"),
         fg: document.querySelector("#fg"),
+        fgHex: document.querySelector("#fgHex"),
         accent: document.querySelector("#accent"),
+        accentHex: document.querySelector("#accentHex"),
         width: document.querySelector("#width"),
         height: document.querySelector("#height"),
         frames: document.querySelector("#frames"),
@@ -419,6 +437,10 @@
         element.addEventListener("input", update);
         element.addEventListener("change", update);
       }
+
+      syncColor("bg", "bgHex");
+      syncColor("fg", "fgHex");
+      syncColor("accent", "accentHex");
 
       controls.fixedMode.addEventListener("click", () => setMode("fixed"));
       controls.evergreenMode.addEventListener("click", () => setMode("evergreen"));
@@ -479,7 +501,35 @@
       }
 
       function color(id) {
-        return value(id).replace("#", "");
+        const hexInput = controls[`${id}Hex`];
+        const source = hexInput ? hexInput.value : value(id);
+        return normalizeHex(source).replace("#", "");
+      }
+
+      function syncColor(colorId, textId) {
+        controls[colorId].addEventListener("input", () => {
+          controls[textId].value = controls[colorId].value;
+          update();
+        });
+
+        controls[textId].addEventListener("input", () => {
+          const normalized = normalizeHex(controls[textId].value);
+          if (normalized) {
+            controls[colorId].value = normalized;
+            update();
+          }
+        });
+      }
+
+      function normalizeHex(input) {
+        const clean = String(input || "").trim().replace("#", "");
+        if (/^[0-9a-fA-F]{3}$/.test(clean)) {
+          return `#${clean.split("").map((char) => char + char).join("").toLowerCase()}`;
+        }
+        if (/^[0-9a-fA-F]{6}$/.test(clean)) {
+          return `#${clean.toLowerCase()}`;
+        }
+        return "";
       }
 
       function durationSeconds() {

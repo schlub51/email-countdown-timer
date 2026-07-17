@@ -9,7 +9,8 @@
   },
   "dependencies": {
     "@upstash/redis": "^1.35.3",
-    "gif-encoder-2": "^1.0.5"
+    "gif-encoder-2": "^1.0.5",
+    "sharp": "^0.35.3"
   },
   "devDependencies": {
     "vercel": "^56.3.1"
