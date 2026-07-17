@@ -366,12 +366,12 @@
             </label>
             <label>
               Height
-              <input id="height" type="number" min="80" max="320" value="80">
+              <input id="height" type="number" min="80" max="320" value="90">
             </label>
           </div>
           <label>
             Frames
-            <input id="frames" type="number" min="1" max="60" value="20">
+            <input id="frames" type="number" min="1" max="60" value="15">
           </label>
           <label>
             <span>
@@ -386,7 +386,7 @@
       <section>
         <div class="preview-wrap">
           <div class="preview-stage">
-            <img id="preview" src="/api/timer?mode=duration&amp;duration=7200&amp;style=arc&amp;font=inter&amp;width=400&amp;height=80&amp;frames=20&amp;loop=false&amp;bg=ffffff&amp;fg=0f1a4c&amp;accent=233db2" alt="Countdown preview">
+            <img id="preview" src="/api/timer?mode=duration&amp;duration=7200&amp;style=arc&amp;font=inter&amp;width=400&amp;height=90&amp;frames=15&amp;loop=false&amp;bg=ffffff&amp;fg=0f1a4c&amp;accent=233db2" alt="Countdown preview">
           </div>
 
           <div class="meta">
@@ -495,6 +495,9 @@
       function update() {
         const url = buildUrl();
         const previewUrl = new URL(url);
+        if (mode === "evergreen") {
+          previewUrl.searchParams.set("preview", "true");
+        }
         previewUrl.searchParams.set("_", cacheBust);
 
         controls.preview.src = previewUrl.toString();
