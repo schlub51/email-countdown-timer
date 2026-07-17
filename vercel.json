@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/countdown.php",
+      "destination": "/api/timer"
+    }
+  ]
+}

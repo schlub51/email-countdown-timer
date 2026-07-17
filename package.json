@@ -1,0 +1,20 @@
+{
+  "name": "email-countdown-timer",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vercel dev",
+    "test": "node scripts/smoke-test.mjs"
+  },
+  "dependencies": {
+    "@upstash/redis": "^1.35.3",
+    "gif-encoder-2": "^1.0.5"
+  },
+  "devDependencies": {
+    "vercel": "^56.3.1"
+  },
+  "engines": {
+    "node": "24.x"
+  }
+}

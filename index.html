@@ -1,0 +1,538 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Email Countdown Timer</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #f4f6f8;
+        color: #161a1f;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+      }
+
+      button,
+      input,
+      select,
+      textarea {
+        font: inherit;
+      }
+
+      main {
+        min-height: 100vh;
+        display: grid;
+        grid-template-columns: minmax(340px, 420px) minmax(0, 1fr);
+      }
+
+      aside {
+        min-height: 100vh;
+        padding: 24px;
+        border-right: 1px solid #d9dee7;
+        background: #ffffff;
+      }
+
+      section {
+        padding: 32px;
+      }
+
+      h1 {
+        margin: 0 0 6px;
+        font-size: 24px;
+        line-height: 1.15;
+        letter-spacing: 0;
+      }
+
+      h2 {
+        margin: 0 0 14px;
+        font-size: 13px;
+        line-height: 1.2;
+        letter-spacing: 0;
+        text-transform: uppercase;
+        color: #667085;
+      }
+
+      p {
+        margin: 0;
+        color: #5d6673;
+        line-height: 1.5;
+      }
+
+      .intro {
+        margin-bottom: 22px;
+      }
+
+      .group {
+        padding: 18px 0;
+        border-top: 1px solid #edf0f4;
+      }
+
+      .row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+
+      label {
+        display: grid;
+        gap: 7px;
+        margin-bottom: 13px;
+        font-size: 13px;
+        font-weight: 650;
+        color: #303741;
+      }
+
+      input,
+      select,
+      textarea {
+        width: 100%;
+        min-height: 40px;
+        border: 1px solid #cfd6df;
+        border-radius: 7px;
+        padding: 9px 10px;
+        background: #ffffff;
+        color: #17191c;
+      }
+
+      input[type="color"] {
+        padding: 3px;
+      }
+
+      textarea {
+        min-height: 118px;
+        resize: vertical;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+        font-size: 12px;
+      }
+
+      .segmented {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+        padding: 4px;
+        border: 1px solid #d7dde6;
+        border-radius: 8px;
+        background: #f4f6f8;
+      }
+
+      .segmented button {
+        min-height: 36px;
+        border: 0;
+        border-radius: 6px;
+        background: transparent;
+        color: #596272;
+        cursor: pointer;
+      }
+
+      .segmented button.active {
+        background: #ffffff;
+        color: #111827;
+        box-shadow: 0 1px 2px rgba(16, 24, 40, 0.12);
+      }
+
+      .preview-wrap {
+        display: grid;
+        align-content: start;
+        gap: 18px;
+        max-width: 900px;
+      }
+
+      .preview-stage {
+        display: grid;
+        place-items: center;
+        min-height: 280px;
+        padding: 26px;
+        border: 1px solid #d7dde6;
+        border-radius: 8px;
+        background:
+          linear-gradient(45deg, #eef1f5 25%, transparent 25%),
+          linear-gradient(-45deg, #eef1f5 25%, transparent 25%),
+          linear-gradient(45deg, transparent 75%, #eef1f5 75%),
+          linear-gradient(-45deg, transparent 75%, #eef1f5 75%);
+        background-color: #ffffff;
+        background-position: 0 0, 0 10px, 10px -10px, -10px 0;
+        background-size: 20px 20px;
+      }
+
+      .preview-stage img {
+        display: block;
+        max-width: 100%;
+        height: auto;
+        border-radius: 6px;
+        box-shadow: 0 12px 36px rgba(16, 24, 40, 0.18);
+      }
+
+      .meta {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .metric {
+        padding: 14px;
+        border: 1px solid #dfe4eb;
+        border-radius: 8px;
+        background: #ffffff;
+      }
+
+      .metric strong {
+        display: block;
+        margin-bottom: 4px;
+        font-size: 20px;
+      }
+
+      .metric span {
+        color: #667085;
+        font-size: 12px;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .actions button {
+        min-height: 40px;
+        border: 1px solid #cfd6df;
+        border-radius: 7px;
+        padding: 0 14px;
+        background: #ffffff;
+        color: #17191c;
+        cursor: pointer;
+      }
+
+      .actions button.primary {
+        border-color: #111827;
+        background: #111827;
+        color: #ffffff;
+      }
+
+      .hint {
+        font-size: 12px;
+        color: #667085;
+      }
+
+      .hidden {
+        display: none;
+      }
+
+      @media (max-width: 860px) {
+        main {
+          grid-template-columns: 1fr;
+        }
+
+        aside {
+          min-height: auto;
+          border-right: 0;
+          border-bottom: 1px solid #d9dee7;
+        }
+
+        section {
+          padding: 22px;
+        }
+
+        .meta {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <aside>
+        <div class="intro">
+          <h1>Email Countdown Timer</h1>
+          <p>Configure a fixed-date or evergreen timer, preview it live, then use the generated image tag in your email.</p>
+        </div>
+
+        <div class="group">
+          <h2>Timer Mode</h2>
+          <div class="segmented" role="tablist" aria-label="Timer mode">
+            <button id="fixedMode" class="active" type="button">Fixed date</button>
+            <button id="evergreenMode" type="button">Evergreen</button>
+          </div>
+        </div>
+
+        <div id="fixedControls" class="group">
+          <h2>Deadline</h2>
+          <label>
+            End date and time
+            <input id="endDate" type="datetime-local">
+          </label>
+          <p class="hint">All recipients see the same countdown.</p>
+        </div>
+
+        <div id="evergreenControls" class="group hidden">
+          <h2>Duration</h2>
+          <div class="row">
+            <label>
+              Days
+              <input id="days" type="number" min="0" max="30" value="0">
+            </label>
+            <label>
+              Hours
+              <input id="hours" type="number" min="0" max="23" value="2">
+            </label>
+          </div>
+          <div class="row">
+            <label>
+              Minutes
+              <input id="minutes" type="number" min="0" max="59" value="0">
+            </label>
+            <label>
+              Recipient ID
+              <input id="recipientId" type="text" value="{{ customer.id }}">
+            </label>
+          </div>
+          <p class="hint">Each unique ID gets its own first-seen timestamp in Redis.</p>
+        </div>
+
+        <div class="group">
+          <h2>Style</h2>
+          <label>
+            Layout
+            <select id="style">
+              <option value="arc">Arc</option>
+              <option value="card">Card</option>
+            </select>
+          </label>
+          <div class="row">
+            <label>
+              Background
+              <input id="bg" type="color" value="#111827">
+            </label>
+            <label>
+              Text
+              <input id="fg" type="color" value="#ffffff">
+            </label>
+          </div>
+          <label>
+            Accent
+            <input id="accent" type="color" value="#f59e0b">
+          </label>
+        </div>
+
+        <div class="group">
+          <h2>Output</h2>
+          <div class="row">
+            <label>
+              Width
+              <input id="width" type="number" min="320" max="1200" value="640">
+            </label>
+            <label>
+              Height
+              <input id="height" type="number" min="100" max="320" value="140">
+            </label>
+          </div>
+          <label>
+            Frames
+            <input id="frames" type="number" min="1" max="60" value="45">
+          </label>
+          <p class="hint">Fewer frames means a smaller GIF. Keep the first frame readable for clients that do not animate GIFs.</p>
+        </div>
+      </aside>
+
+      <section>
+        <div class="preview-wrap">
+          <div class="preview-stage">
+            <img id="preview" alt="Countdown preview">
+          </div>
+
+          <div class="meta">
+            <div class="metric">
+              <strong id="sizeMetric">-</strong>
+              <span>Estimated GIF size</span>
+            </div>
+            <div class="metric">
+              <strong id="modeMetric">Fixed</strong>
+              <span>Current mode</span>
+            </div>
+            <div class="metric">
+              <strong id="durationMetric">-</strong>
+              <span>Timer length</span>
+            </div>
+          </div>
+
+          <label>
+            Image URL
+            <textarea id="imageUrl" readonly></textarea>
+          </label>
+
+          <label>
+            Email HTML
+            <textarea id="htmlSnippet" readonly></textarea>
+          </label>
+
+          <div class="actions">
+            <button id="copyUrl" class="primary" type="button">Copy URL</button>
+            <button id="copyHtml" type="button">Copy HTML</button>
+            <button id="refreshPreview" type="button">Refresh preview</button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const controls = {
+        fixedMode: document.querySelector("#fixedMode"),
+        evergreenMode: document.querySelector("#evergreenMode"),
+        fixedControls: document.querySelector("#fixedControls"),
+        evergreenControls: document.querySelector("#evergreenControls"),
+        endDate: document.querySelector("#endDate"),
+        days: document.querySelector("#days"),
+        hours: document.querySelector("#hours"),
+        minutes: document.querySelector("#minutes"),
+        recipientId: document.querySelector("#recipientId"),
+        style: document.querySelector("#style"),
+        bg: document.querySelector("#bg"),
+        fg: document.querySelector("#fg"),
+        accent: document.querySelector("#accent"),
+        width: document.querySelector("#width"),
+        height: document.querySelector("#height"),
+        frames: document.querySelector("#frames"),
+        preview: document.querySelector("#preview"),
+        imageUrl: document.querySelector("#imageUrl"),
+        htmlSnippet: document.querySelector("#htmlSnippet"),
+        sizeMetric: document.querySelector("#sizeMetric"),
+        modeMetric: document.querySelector("#modeMetric"),
+        durationMetric: document.querySelector("#durationMetric"),
+        copyUrl: document.querySelector("#copyUrl"),
+        copyHtml: document.querySelector("#copyHtml"),
+        refreshPreview: document.querySelector("#refreshPreview"),
+      };
+
+      let mode = "fixed";
+      let cacheBust = Date.now();
+      const defaultEnd = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
+      controls.endDate.value = toDatetimeLocal(defaultEnd);
+
+      for (const element of document.querySelectorAll("input, select")) {
+        element.addEventListener("input", update);
+        element.addEventListener("change", update);
+      }
+
+      controls.fixedMode.addEventListener("click", () => setMode("fixed"));
+      controls.evergreenMode.addEventListener("click", () => setMode("evergreen"));
+      controls.refreshPreview.addEventListener("click", () => {
+        cacheBust = Date.now();
+        update();
+      });
+      controls.copyUrl.addEventListener("click", () => copyText(controls.imageUrl.value));
+      controls.copyHtml.addEventListener("click", () => copyText(controls.htmlSnippet.value));
+
+      update();
+
+      function setMode(nextMode) {
+        mode = nextMode;
+        controls.fixedMode.classList.toggle("active", mode === "fixed");
+        controls.evergreenMode.classList.toggle("active", mode === "evergreen");
+        controls.fixedControls.classList.toggle("hidden", mode !== "fixed");
+        controls.evergreenControls.classList.toggle("hidden", mode !== "evergreen");
+        update();
+      }
+
+      function update() {
+        const url = buildUrl();
+        const previewUrl = new URL(url);
+        previewUrl.searchParams.set("_", cacheBust);
+
+        controls.preview.src = previewUrl.toString();
+        controls.imageUrl.value = url;
+        controls.htmlSnippet.value = `<img src="${url}" width="${value("width")}" height="${value("height")}" alt="Countdown">`;
+        controls.modeMetric.textContent = mode === "fixed" ? "Fixed" : "Evergreen";
+        controls.durationMetric.textContent = mode === "fixed" ? fixedDurationLabel() : durationLabel(durationSeconds());
+        estimateSize(previewUrl.toString());
+      }
+
+      function buildUrl() {
+        const url = new URL("/api/timer", window.location.origin);
+        url.searchParams.set("mode", mode);
+        url.searchParams.set("style", value("style"));
+        url.searchParams.set("bg", color("bg"));
+        url.searchParams.set("fg", color("fg"));
+        url.searchParams.set("accent", color("accent"));
+        url.searchParams.set("width", value("width"));
+        url.searchParams.set("height", value("height"));
+        url.searchParams.set("frames", value("frames"));
+
+        if (mode === "fixed") {
+          url.searchParams.set("end", new Date(controls.endDate.value).toISOString());
+        } else {
+          url.searchParams.set("duration", durationSeconds());
+          url.searchParams.set("id", controls.recipientId.value || "{{ customer.id }}");
+        }
+
+        return url.toString();
+      }
+
+      function value(id) {
+        return controls[id].value;
+      }
+
+      function color(id) {
+        return value(id).replace("#", "");
+      }
+
+      function durationSeconds() {
+        const days = number("days", 0);
+        const hours = number("hours", 0);
+        const minutes = number("minutes", 0);
+        return Math.max(60, days * 86400 + hours * 3600 + minutes * 60);
+      }
+
+      function number(id, fallback) {
+        const parsed = Number.parseInt(value(id), 10);
+        return Number.isFinite(parsed) ? parsed : fallback;
+      }
+
+      function durationLabel(seconds) {
+        const days = Math.floor(seconds / 86400);
+        const hours = Math.floor((seconds % 86400) / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        return [days ? `${days}d` : "", hours ? `${hours}h` : "", minutes ? `${minutes}m` : ""].filter(Boolean).join(" ") || "1m";
+      }
+
+      function fixedDurationLabel() {
+        const end = new Date(controls.endDate.value).getTime();
+        const seconds = Math.max(0, Math.floor((end - Date.now()) / 1000));
+        return durationLabel(seconds);
+      }
+
+      function toDatetimeLocal(date) {
+        const offset = date.getTimezoneOffset() * 60000;
+        return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+      }
+
+      async function estimateSize(url) {
+        controls.sizeMetric.textContent = "...";
+        try {
+          const response = await fetch(url, { cache: "no-store" });
+          const blob = await response.blob();
+          controls.sizeMetric.textContent = formatBytes(blob.size);
+        } catch {
+          controls.sizeMetric.textContent = "-";
+        }
+      }
+
+      function formatBytes(bytes) {
+        if (bytes < 1024) {
+          return `${bytes} B`;
+        }
+        return `${(bytes / 1024).toFixed(1)} KB`;
+      }
+
+      async function copyText(text) {
+        await navigator.clipboard.writeText(text);
+      }
+    </script>
+  </body>
+</html>
