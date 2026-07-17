@@ -311,27 +311,36 @@
               <option value="card">Card</option>
             </select>
           </label>
+          <label>
+            Typeface
+            <select id="font">
+              <option value="inter">Inter</option>
+              <option value="roboto">Roboto</option>
+              <option value="open-sans">Open Sans</option>
+              <option value="lato">Lato</option>
+            </select>
+          </label>
           <div class="row">
             <label>
               Background
               <span class="color-pair">
-                <input id="bg" type="color" value="#111827">
-                <input id="bgHex" type="text" value="#111827" spellcheck="false">
+                <input id="bg" type="color" value="#ffffff">
+                <input id="bgHex" type="text" value="#ffffff" spellcheck="false">
               </span>
             </label>
             <label>
               Text
               <span class="color-pair">
-                <input id="fg" type="color" value="#ffffff">
-                <input id="fgHex" type="text" value="#ffffff" spellcheck="false">
+                <input id="fg" type="color" value="#0f1a4c">
+                <input id="fgHex" type="text" value="#0f1a4c" spellcheck="false">
               </span>
             </label>
           </div>
           <label>
             Accent
             <span class="color-pair">
-              <input id="accent" type="color" value="#f59e0b">
-              <input id="accentHex" type="text" value="#f59e0b" spellcheck="false">
+              <input id="accent" type="color" value="#233db2">
+              <input id="accentHex" type="text" value="#233db2" spellcheck="false">
             </span>
           </label>
         </div>
@@ -359,7 +368,7 @@
       <section>
         <div class="preview-wrap">
           <div class="preview-stage">
-            <img id="preview" src="/api/timer?mode=duration&amp;duration=7200&amp;style=arc&amp;width=480&amp;height=120&amp;frames=30" alt="Countdown preview">
+            <img id="preview" src="/api/timer?mode=duration&amp;duration=7200&amp;style=arc&amp;width=480&amp;height=120&amp;frames=30&amp;bg=ffffff&amp;fg=0f1a4c&amp;accent=233db2" alt="Countdown preview">
           </div>
 
           <div class="meta">
@@ -408,6 +417,7 @@
         minutes: document.querySelector("#minutes"),
         recipientId: document.querySelector("#recipientId"),
         style: document.querySelector("#style"),
+        font: document.querySelector("#font"),
         bg: document.querySelector("#bg"),
         bgHex: document.querySelector("#bgHex"),
         fg: document.querySelector("#fg"),
@@ -479,6 +489,7 @@
         const url = new URL("/api/timer", window.location.origin);
         url.searchParams.set("mode", mode);
         url.searchParams.set("style", value("style"));
+        url.searchParams.set("font", value("font"));
         url.searchParams.set("bg", color("bg"));
         url.searchParams.set("fg", color("fg"));
         url.searchParams.set("accent", color("accent"));

@@ -1,20 +1,24 @@
 import GIFEncoder from "gif-encoder-2";
 import { Redis } from "@upstash/redis";
 import sharp from "sharp";
+import TextToSVG from "text-to-svg";
+import { fileURLToPath } from "node:url";
 
 const DEFAULTS = {
   width: 640,
   height: 140,
-  background: "111827",
-  foreground: "FFFFFF",
-  accent: "F59E0B",
+  background: "FFFFFF",
+  foreground: "0F1A4C",
+  accent: "233DB2",
   label: "DAYS,HRS,MINS,SECS",
   duration: 7200,
   frames: 60,
   style: "arc",
+  font: "inter",
 };
 
 let redis;
+let textToSvg;
 
 const SEGMENTS = {
   0: ["a", "b", "c", "d", "e", "f"],
@@ -104,6 +108,7 @@ function getOptions(params) {
     duration: clampNumber(params.get("duration"), 60, 60 * 60 * 24 * 30, DEFAULTS.duration),
     frames: clampNumber(params.get("frames"), 1, 60, DEFAULTS.frames),
     style: ["arc", "card"].includes((params.get("style") || "").toLowerCase()) ? params.get("style").toLowerCase() : DEFAULTS.style,
+    font: normalizeFont(params.get("font")),
   };
 }
 
@@ -145,29 +150,24 @@ function createArcSvg(totalSeconds, options) {
   const stroke = Math.max(6, Math.floor(radius * 0.13));
   const circumference = 2 * Math.PI * radius;
   const maxValues = [99, 24, 60, 60];
-  const labelSize = Math.max(10, Math.floor(radius * 0.19));
-  const digitHeight = Math.floor(radius * 0.92);
-  const digitWidth = Math.floor(radius * 0.44);
-  const digitGap = Math.max(4, Math.floor(radius * 0.08));
+  const labelSize = Math.max(10, Math.floor(radius * 0.2));
+  const numberSize = Math.max(28, Math.floor(radius * 0.82));
 
   const cells = values.map((value, index) => {
     const centerX = margin + Math.floor(cellWidth / 2) + index * (cellWidth + gap);
     const progress = Math.max(0, Math.min(1, value / maxValues[index]));
     const dash = circumference * progress;
     const displayValue = String(value).padStart(2, "0");
-    const digitsWidth = digitWidth * 2 + digitGap;
-    const digitY = centerY - Math.floor(digitHeight / 2);
-    const firstDigitX = centerX - Math.floor(digitsWidth / 2);
-    const secondDigitX = firstDigitX + digitWidth + digitGap;
+    const numberPath = svgText(displayValue, centerX, centerY + Math.floor(numberSize * 0.34), numberSize, fg, 700, true, 0, options.font);
+    const labelPath = svgText(labels[index] || "", centerX, centerY + radius + labelSize + 5, labelSize, "rgba(15,26,76,0.52)", 600, true, 1.5, options.font);
 
     return `
       <g>
-        <circle cx="${centerX}" cy="${centerY}" r="${radius}" fill="none" stroke="rgba(255,255,255,0.16)" stroke-width="${stroke}" />
+        <circle cx="${centerX}" cy="${centerY}" r="${radius}" fill="none" stroke="rgba(15,26,76,0.13)" stroke-width="${stroke}" />
         <circle cx="${centerX}" cy="${centerY}" r="${radius}" fill="none" stroke="${accent}" stroke-width="${stroke}" stroke-linecap="round"
           stroke-dasharray="${dash} ${circumference - dash}" transform="rotate(-90 ${centerX} ${centerY})" />
-        ${svgDigit(displayValue[0], firstDigitX, digitY, digitWidth, digitHeight, fg)}
-        ${svgDigit(displayValue[1], secondDigitX, digitY, digitWidth, digitHeight, fg)}
-        ${svgTinyText(labels[index] || "", centerX, centerY + radius + 7, labelSize, "rgba(255,255,255,0.55)")}
+        ${numberPath}
+        ${labelPath}
       </g>`;
   }).join("");
 
@@ -178,51 +178,78 @@ function createArcSvg(totalSeconds, options) {
     </svg>`;
 }
 
-const DIGIT_PATHS = {
-  0: "M50 10 C25 10 14 36 14 80 C14 124 25 150 50 150 C75 150 86 124 86 80 C86 36 75 10 50 10 Z",
-  1: "M38 38 L60 16 L60 150",
-  2: "M18 48 C22 18 79 15 83 48 C87 79 24 92 18 150 L86 150",
-  3: "M20 24 C74 6 94 42 57 77 C96 87 85 156 20 140",
-  4: "M78 150 L78 14 L14 104 L90 104",
-  5: "M82 16 L24 16 L18 70 C90 50 98 150 20 144",
-  6: "M78 20 C35 20 18 62 20 103 C22 146 84 158 86 104 C88 64 34 64 20 104",
-  7: "M16 18 L88 18 L40 150",
-  8: "M50 80 C23 80 20 12 50 12 C80 12 77 80 50 80 Z M50 80 C17 80 16 150 50 150 C84 150 83 80 50 80 Z",
-  9: "M22 144 C65 144 82 102 80 61 C78 18 16 6 14 60 C12 100 66 100 80 60",
-};
+function svgText(text, x, y, fontSize, color, weight, centered = false, letterSpacing = 0, font = DEFAULTS.font) {
+  const renderer = getTextRenderer(font, weight);
+  const attributes = { fill: color };
+  const options = {
+    x,
+    y,
+    fontSize,
+    anchor: centered ? "center" : "left",
+    attributes,
+  };
 
-function svgDigit(value, x, y, width, height, color) {
-  const path = DIGIT_PATHS[value] || DIGIT_PATHS[0];
-  const scaleX = width / 100;
-  const scaleY = height / 160;
-  const stroke = Math.max(4, Math.min(width, height) * 0.11);
-
-  return `<path d="${path}" transform="translate(${x} ${y}) scale(${scaleX} ${scaleY})" fill="none" stroke="${color}" stroke-width="${stroke}" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" />`;
-}
-
-function svgTinyText(text, centerX, y, size, color) {
-  const scale = Math.max(1.5, size / 5);
-  const spacing = scale;
-  const chars = text.toUpperCase().replace(/[^A-Z]/g, "").split("");
-  const textWidth = chars.length * 3 * scale + Math.max(0, chars.length - 1) * spacing;
-  let x = centerX - textWidth / 2;
-  let output = "";
-
-  for (const char of chars) {
-    const glyph = LETTERS[char];
-    if (glyph) {
-      for (let row = 0; row < glyph.length; row += 1) {
-        for (let col = 0; col < glyph[row].length; col += 1) {
-          if (glyph[row][col] === "1") {
-            output += `<rect x="${x + col * scale}" y="${y + row * scale}" width="${scale}" height="${scale}" fill="${color}" />`;
-          }
-        }
-      }
-    }
-    x += 3 * scale + spacing;
+  if (letterSpacing > 0) {
+    let cursor = x;
+    const chars = String(text).split("");
+    const widths = chars.map((char) => renderer.getMetrics(char, { fontSize }).width);
+    const total = widths.reduce((sum, width) => sum + width, 0) + Math.max(0, chars.length - 1) * letterSpacing;
+    cursor = centered ? x - total / 2 : x;
+    return chars.map((char, index) => {
+      const path = renderer.getPath(char, {
+        x: cursor,
+        y,
+        fontSize,
+        attributes,
+      });
+      cursor += widths[index] + letterSpacing;
+      return path;
+    }).join("");
   }
 
-  return `<g>${output}</g>`;
+  return renderer.getPath(String(text), options);
+}
+
+const FONT_FILES = {
+  inter: {
+    600: "../node_modules/@fontsource/inter/files/inter-latin-600-normal.woff",
+    700: "../node_modules/@fontsource/inter/files/inter-latin-700-normal.woff",
+  },
+  roboto: {
+    600: "../node_modules/@fontsource/roboto/files/roboto-latin-600-normal.woff",
+    700: "../node_modules/@fontsource/roboto/files/roboto-latin-700-normal.woff",
+  },
+  "open-sans": {
+    600: "../node_modules/@fontsource/open-sans/files/open-sans-latin-600-normal.woff",
+    700: "../node_modules/@fontsource/open-sans/files/open-sans-latin-700-normal.woff",
+  },
+  lato: {
+    600: "../node_modules/@fontsource/lato/files/lato-latin-700-normal.woff",
+    700: "../node_modules/@fontsource/lato/files/lato-latin-700-normal.woff",
+  },
+};
+
+function getTextRenderer(font, weight) {
+  if (!textToSvg) {
+    textToSvg = new Map();
+  }
+
+  const family = normalizeFont(font);
+  const normalizedWeight = weight >= 700 ? 700 : 600;
+  const key = `${family}:${normalizedWeight}`;
+  if (!textToSvg.has(key)) {
+    textToSvg.set(
+      key,
+      TextToSVG.loadSync(fileURLToPath(new URL(FONT_FILES[family][normalizedWeight], import.meta.url))),
+    );
+  }
+
+  return textToSvg.get(key);
+}
+
+function normalizeFont(value) {
+  const font = String(value || "").toLowerCase();
+  return Object.hasOwn(FONT_FILES, font) ? font : DEFAULTS.font;
 }
 
 function drawFrame(totalSeconds, options) {
