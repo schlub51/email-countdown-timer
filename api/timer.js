@@ -100,7 +100,7 @@ function getRedis() {
 function getOptions(params) {
   return {
     width: clampNumber(params.get("width"), 320, 1200, DEFAULTS.width),
-    height: clampNumber(params.get("height"), 100, 320, DEFAULTS.height),
+    height: clampNumber(params.get("height"), 80, 320, DEFAULTS.height),
     background: normalizeHex(params.get("bg") || params.get("background"), DEFAULTS.background),
     foreground: normalizeHex(params.get("fg") || params.get("foreground"), DEFAULTS.foreground),
     accent: normalizeHex(params.get("accent"), DEFAULTS.accent),
